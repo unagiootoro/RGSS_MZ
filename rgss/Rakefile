@@ -1,0 +1,232 @@
+require "pp"
+
+BUILD_TARGET = "wasm"
+
+MRUBY_PATH = "/home/ootoro/mruby"
+if BUILD_TARGET == "gcc"
+  CC = "g++"
+  COPTS = "-O3"
+  LINKOPTS = ""
+  LIBS = "-L#{MRUBY_PATH}/build/host/lib/"
+  TARGET_NAME = "program"
+elsif BUILD_TARGET == "wasm"
+  CC = "em++"
+  COPTS = "-s WASM=1 -Oz"
+  LINKOPTS = %`-s WASM=1 -s ASSERTIONS=1 -s EXPORTED_FUNCTIONS="['_init_rgss', '_update_rgss']" -s EXPORTED_RUNTIME_METHODS=['UTF8ToString'] --js-library rgss_send_message.js`
+  # LINKOPTS = %`-s WASM=1 -Oz -s EXPORTED_FUNCTIONS="['_init_rgss', '_update_rgss']" -s EXPORTED_RUNTIME_METHODS=['UTF8ToString'] --js-library rgss_send_message.js`
+
+
+  LIBS = "-L#{MRUBY_PATH}/build/emscripten/lib/"
+  TARGET_NAME = "program2.js"
+end
+INCLUDES = "-I#{MRUBY_PATH}/include -I."
+
+task :build do
+  sh "rake gen_mfull"
+  sh "mrbc -Bmfull mfull.rb"
+  sh "#{CC} #{COPTS} -c #{INCLUDES} mfull.c"
+  sh "#{CC} #{COPTS} -c #{INCLUDES} main.c"
+  # sh "#{CC} #{COPTS} -c #{INCLUDES} marshal.cpp"
+  # sh "#{CC} #{LINKOPTS} #{LIBS} -o #{TARGET_NAME} main.o mfull.o marshal.o -lmruby -lm"
+  sh "#{CC} #{LINKOPTS} #{LIBS} -o #{TARGET_NAME} main.o mfull.o -lmruby -lm"
+  if BUILD_TARGET == "wasm"
+    sh "mv ./#{TARGET_NAME} ../js/plugins/#{TARGET_NAME}"
+    sh "mv ./program2.wasm ../program2.wasm"
+  end
+end
+
+task :build_opal do
+  sh "opal -I. -c program.rb >rgss.js"
+  file = File.read("rgss.js")
+  file = "const global = self;" + file
+  File.write("rgss.js", file)
+end
+
+requires_list = [
+  "rgssenv",
+  "marshal_convertor",
+
+  "lib/Audio",
+  "lib/Bitmap",
+  "lib/Color",
+  "lib/Font",
+  "lib/Graphics",
+  "lib/Input",
+  "lib/Plane",
+  "lib/Rect",
+  "lib/RGSSError",
+  "lib/Sprite",
+  "lib/Table",
+  "lib/Tilemap",
+  "lib/Tone",
+  "lib/Viewport",
+  "lib/Window",
+
+  "lib/rpg/Sprite",
+  "lib/rpg/Weather",
+  "lib/rpg/Cache",
+  "lib/rpg/Actor",
+  "lib/rpg/Animation",
+  "lib/rpg/AnimationFrame",
+  "lib/rpg/AnimationTiming",
+  "lib/rpg/Armor",
+  "lib/rpg/AudioFile",
+  "lib/rpg/Class",
+  "lib/rpg/ClassLearning",
+  "lib/rpg/CommonEvent",
+  "lib/rpg/Enemy",
+  "lib/rpg/EnemyAction",
+  "lib/rpg/Event",
+  "lib/rpg/EventCommand",
+  "lib/rpg/EventPage",
+  "lib/rpg/EventPageCondition",
+  "lib/rpg/EventPageGraphic",
+  "lib/rpg/Item",
+  "lib/rpg/Map",
+  "lib/rpg/MapInfo",
+  "lib/rpg/MoveCommand",
+  "lib/rpg/MoveRoute",
+  "lib/rpg/Skill",
+  "lib/rpg/State",
+  "lib/rpg/System",
+  "lib/rpg/SystemTestBattler",
+  "lib/rpg/SystemWords",
+  "lib/rpg/Tileset",
+  "lib/rpg/Troop",
+  "lib/rpg/TroopMember",
+  "lib/rpg/TroopPage",
+  "lib/rpg/TroopPageCondition",
+  "lib/rpg/Weapon",
+  
+  "scripts/src/Game_Temp",
+  "scripts/src/Game_System",
+  "scripts/src/Game_Switches",
+  "scripts/src/Game_Variables",
+  "scripts/src/Game_SelfSwitches",
+  "scripts/src/Game_Screen",
+  "scripts/src/Game_Picture",
+  "scripts/src/Game_Battler 1",
+  "scripts/src/Game_Battler 2",
+  "scripts/src/Game_Battler 3",
+  "scripts/src/Game_BattleAction",
+  "scripts/src/Game_Actor",
+  "scripts/src/Game_Enemy",
+  "scripts/src/Game_Actors",
+  "scripts/src/Game_Party",
+  "scripts/src/Game_Troop",
+  "scripts/src/Game_Map",
+  "scripts/src/Game_CommonEvent",
+  "scripts/src/Game_Character 1",
+  "scripts/src/Game_Character 2",
+  "scripts/src/Game_Character 3",
+  "scripts/src/Game_Event",
+  "scripts/src/Game_Player",
+  "scripts/src/Sprite_Character",
+  "scripts/src/Sprite_Battler",
+  "scripts/src/Sprite_Picture",
+  "scripts/src/Sprite_Timer",
+  "scripts/src/Spriteset_Map",
+  "scripts/src/Spriteset_Battle",
+  "scripts/src/Window_Base",
+  "scripts/src/Window_Selectable",
+  "scripts/src/Window_Command",
+  "scripts/src/Window_Help",
+  "scripts/src/Window_Gold",
+  "scripts/src/Window_PlayTime",
+  "scripts/src/Window_Steps",
+  "scripts/src/Window_MenuStatus",
+  "scripts/src/Window_Item",
+  "scripts/src/Window_Skill",
+  "scripts/src/Window_SkillStatus",
+  "scripts/src/Window_Target",
+  "scripts/src/Window_EquipLeft",
+  "scripts/src/Window_EquipRight",
+  "scripts/src/Window_EquipItem",
+  "scripts/src/Window_Status",
+  "scripts/src/Window_SaveFile",
+  "scripts/src/Window_ShopCommand",
+  "scripts/src/Window_ShopBuy",
+  "scripts/src/Window_ShopSell",
+  "scripts/src/Window_ShopNumber",
+  "scripts/src/Window_ShopStatus",
+  "scripts/src/Window_NameEdit",
+  "scripts/src/Window_NameInput",
+  "scripts/src/Window_InputNumber",
+  "scripts/src/Window_Message",
+  "scripts/src/Window_PartyCommand",
+  "scripts/src/Window_BattleStatus",
+  "scripts/src/Window_BattleResult",
+  "scripts/src/Window_DebugLeft",
+  "scripts/src/Window_DebugRight",
+  "scripts/src/Arrow_Base",
+  "scripts/src/Arrow_Enemy",
+  "scripts/src/Arrow_Actor",
+  "scripts/src/Interpreter 1",
+  "scripts/src/Interpreter 2",
+  "scripts/src/Interpreter 3",
+  "scripts/src/Interpreter 4",
+  "scripts/src/Interpreter 5",
+  "scripts/src/Interpreter 6",
+  "scripts/src/Interpreter 7",
+  "scripts/src/Scene_Title",
+  "scripts/src/Scene_Map",
+  "scripts/src/Scene_Menu",
+  "scripts/src/Scene_Item",
+  "scripts/src/Scene_Skill",
+  "scripts/src/Scene_Equip",
+  "scripts/src/Scene_Status",
+  "scripts/src/Scene_File",
+  "scripts/src/Scene_Save",
+  "scripts/src/Scene_Load",
+  "scripts/src/Scene_End",
+  "scripts/src/Scene_Battle 1",
+  "scripts/src/Scene_Battle 2",
+  "scripts/src/Scene_Battle 3",
+  "scripts/src/Scene_Battle 4",
+  "scripts/src/Scene_Shop",
+  "scripts/src/Scene_Name",
+  "scripts/src/Scene_Gameover",
+  "scripts/src/Scene_Debug",
+  "scripts/src/Main",
+]
+
+task :gen_mfull do
+  src = "RGSS_MODE = :client\n"
+  src << "RGSS_ENABLE_MARSHAL = false\n"
+  src << File.read("filelist.rb")
+  src << "\n"
+  requires_list.each do |fpath|
+    file = File.read(fpath + ".rb")
+    src << file
+    src << "\n"
+  end
+  File.write("mfull.rb", src)
+end
+
+def get_file_paths(dir_path)
+  path_list = []
+  Dir["#{dir_path}/*"].each do |path|
+    if Dir.exist?(path) && File.exist?(path)
+      path_list += get_file_paths(path)
+    elsif File.exist?(path)
+      path_list << path
+    end
+  end
+  path_list
+end
+
+task :gen_filelist do
+  path_list = get_file_paths("../Graphics")
+  path_list += get_file_paths("../Audio")
+  path_list = path_list.map do |path|
+    path.gsub(/^\.\.\//, "")
+  end
+  src = "GRAPHICS_FILE_LIST = " + path_list.pretty_inspect
+  File.write("filelist.rb", src)
+end
+
+task :clean do
+  sh "rm -f *.o program*"
+end
+
+task :default => [:build]
